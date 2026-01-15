@@ -1,0 +1,64 @@
+## Local PC Linux Environment
+
+ssh configured with Azure DevOPs, i.e. can do git push pull etc.
+
+git config --global url."git@ssh.dev.azure.com:v3/<org>/<project>".insteadof "https://dev.azure.com/<org>/<project>/_git"
+
+CGO_ENABLED='1'
+GOOS='linux'
+GOARCH='amd64'
+GOPROXY='https://proxy.golang.org,direct'
+GOPRIVATE='dev.azure.com/*'
+
+go mod tidy
+
+
+## Azure DevOps Pipeline
+
+git config --global url."https://pat:${SYSTEM_ACCESSTOKEN}@dev.azure.com".insteadof "https://dev.azure.com"
+
+- where ${SYSTEM_ACCESSTOKEN} is a developer-defined placeholder for parsed Azure DevOps pipeline variable $(System.AccessToken)
+
+go mod tidy
+
+
+
+## Azure DevOps Dockerfile
+
+RUN --mount=type=secret,id=ado_token \
+  set -eu; SYSTEM_ACCESSTOKEN="$(cat /run/secrets/ado_token)"; \
+  git config --global url."https://pat:${SYSTEM_ACCESSTOKEN}@dev.azure.com".insteadof "https://dev.azure.com"
+
+- where ${SYSTEM_ACCESSTOKEN} is a developer-defined placeholder for parsed Azure DevOps pipeline variable $(System.AccessToken)
+
+go mod tidy
+
+CGO_ENABLED='1'
+GOOS='linux'
+GOARCH='amd64'
+
+
+## Azure DevOps Repo
+
+go.mod =>
+```
+module dev.azure.com/<org>/<project>/_git/<library>.git
+
+go 1.24.4
+
+require dev.azure.com/<org>/<project>/_git/<other-library>.git
+```
+
+go mod tidy
+
+go.sum (after go mod tidy) =>
+```
+dev.azure.com/<org>/<project>/_git/<other-library>.git v#.#.# h1:<some-massive-checksum>
+dev.azure.com/<org>/<project>/_git/<other-library>.git v#.#.#/go.mod h1:<some-other-massive-checksum>
+```
+
+## .go file import
+
+import (
+	dev.azure.com/<org>/<project>/_git/<other-library>.git/<name-module>
+)

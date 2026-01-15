@@ -1,0 +1,55 @@
+
+parameters:
+  - name: 'arg0'
+    type: 'string'
+    displayName: 'Argument - 0'
+  - name: 'arg1'
+    type: 'string'
+    displayName: 'Argument - 1'
+
+steps:
+  - script: | # Make some vars in another script!
+
+      echo "vso[task.setvariable variable=someVar]someValue"
+      # If parsing in values ...
+      echo "##vso[task.setvariable variable=${varName}]${value}"
+      echo "##vso[task.setvariable variable=scripts]$(Build.SourcesDirectory)/nameProjectRepo/azure-devops-pipelines/scripts"
+
+      # After this script, the pipeline and other scripts will be able to reference
+      # $(someVar)
+      # $(varName)
+      
+      bashVar="someValue"
+      # After this script, any other template bash script or .sh file will be able to reference
+      # ${bashVar}
+
+
+    displayName: 'Pipeline - Env Vars'
+    condition: always() # Always run!
+
+  - script: | # Pipe the bash script into the template / step.
+      
+      # How you reference a bash script.
+      # $(scripts) is a pipeline variable that is the path within the pipeline.
+      # Keep script paths absolute so you can change workingDirectory in templates with no dramas.
+      # See previous script in this file
+      # NOTE: A bash file like this CANNOT access Azure Pipeline variables internally i.e $(varName) only other bash vars like ${varName}.
+      source "$(scripts)"/scriptDoTheThing.sh
+
+      # This is how you parse in parameters from the .yml template.
+      if doTheThing ${{ parameters.arg0 }} ${{ parameters.arg1 }}; then
+        echo "##vso[task.setvariable variable=artefactGenerated]true"
+      fi
+
+      echo "doTheThing - has now created an artefact that can be published called artefact.zip"
+
+    workingDirectory: $(projectRepo) # As much as possible try to do everything from your own dir reference.
+    displayName: 'Pipeline - Script - Do The Thing!'
+    condition: suceeded() # The previous pipeline condition must succeed before this step will run. Conditions can also be customised.
+
+  - publish: 'artefact.zip' # Ensure this is correct! See if 'workingDirectory: is applicable here too, but never needed it so far.'
+    artifact: 'nameOfArtefactToDisplayInPipelineDashboard'
+    displayName: 'Pipeline - Publish Artefact to the Pipeline Dashboard'
+    condition: and(succeeded(), eq(variables['artefactGenerated'], 'true')) # This is a custom condition that relies on the previous step to have succeeded AND 'artefactGenerated' to be init/set to 'true'.
+
+

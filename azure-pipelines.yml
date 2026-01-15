@@ -1,0 +1,45 @@
+
+trigger: # What triggers the pipeline? ...
+  branches:
+    include:
+      - 'refs/heads/master' # ... a push to master branch
+
+resources:
+  repositories:
+    - repository: 'self' # The project repo that is being built. Will be called something else.
+      type: 'git'
+      ref: 'refs/head/master'
+    - repository: '<library-go>' # The Go library you want to reference within the project repo.
+      type: 'git'
+      ref: 'refs/heads/master' # This other one MUST be 'refs/heads/master' that is heads with an 's'!
+
+
+variables: # any variables you want, but suggest setting up a template to consolidate init of env vars.
+  # Azure DevOps Pipeline - mandatory compile-time variable.
+  # You set this up under ...
+  # https://dev.azure.com/<org>/<project>/_settings/adminservices
+  # Click on 'Service connections' (left pane)
+  # Click on service connection and copy icon for GUID.
+  dockerRegistryServiceConnection: '<guid-service-connection>'
+
+
+stages:
+  variables:
+    - group: '<name-pipeline-library-0>' # This could be a project-specific variable library.
+    - group: '<name-pipeline-library-N>' # This could be a generic one with Azure Secrets.
+  jobs:
+  - job: 'Build'
+    displayName: 'Build'
+    pool:
+      vmImage: 'ubuntu-latest' # The fresh VM variant to be used by the pipeline (new instance each time).
+    steps:
+    - template: '<your-step-0>.yml'
+    - template: '<your-step-N>.yml'
+    - template: 'pipelineStep.yml'
+    - template: 'pipelineStepWithParam.yml'
+      parameters:
+        arg0: 'stringValue'
+        arg1: $(someKindaDevOpsDynamicVariable)
+  displayName: 'Azure DevOps Pipeline - Run the Lot!'
+
+ 
