@@ -1,3 +1,11 @@
+# Handy tutorials
+#
+# YouTube - Playlist - Azure DevOps Zero to Hero
+# www.youtube.com/watch?v=A_N5oHwwmTQ&list=PLl4APkPHzsUXseJO1a03CtfRDzr2hivbD
+#
+# YouTUbe - Rainer Stropek - CI/CD For Go App with Azure Pipelines
+# www.youtube.com/watch?v=50fCOM4JfbA
+
 
 trigger: # What triggers the pipeline? ...
   branches:
