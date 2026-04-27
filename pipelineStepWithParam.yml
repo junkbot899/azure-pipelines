@@ -23,9 +23,10 @@ steps:
       # After this script, any other template bash script or .sh file will be able to reference
       # ${bashVar}
 
-
     displayName: 'Pipeline - Env Vars'
     condition: always() # Always run!
+
+
 
   - script: | # Pipe the bash script into the template / step.
       
@@ -38,18 +39,99 @@ steps:
 
       # This is how you parse in parameters from the .yml template.
       if doTheThing ${{ parameters.arg0 }} ${{ parameters.arg1 }}; then
-        echo "##vso[task.setvariable variable=artefactGenerated]true"
+        echo "##vso[task.setvariable variable=artefactGenerated]true" # this is how you set environmental variables that are active for the pipeline run.
       fi
 
       echo "doTheThing - has now created an artefact that can be published called artefact.zip"
 
+    env:
+      NAME_ENV: $(NAMESECRET) # How you must parse Azure Secrets.
     workingDirectory: $(projectRepo) # As much as possible try to do everything from your own dir reference.
     displayName: 'Pipeline - Script - Do The Thing!'
     condition: suceeded() # The previous pipeline condition must succeed before this step will run. Conditions can also be customised.
+
+
 
   - publish: 'artefact.zip' # Ensure this is correct! See if 'workingDirectory: is applicable here too, but never needed it so far.'
     artifact: 'nameOfArtefactToDisplayInPipelineDashboard'
     displayName: 'Pipeline - Publish Artefact to the Pipeline Dashboard'
     condition: and(succeeded(), eq(variables['artefactGenerated'], 'true')) # This is a custom condition that relies on the previous step to have succeeded AND 'artefactGenerated' to be init/set to 'true'.
+
+
+
+    # Build a container on the ACR.
+  - task: Docker@2
+    inputs:
+      command: build
+      containerRegistry: '<dockerRegistryServiceConnectionId>'
+      repository: '<name-acr-repo>'
+      dockerfile: '<path-dockerfile>'
+      buildContext: '<path-build-context>' # i.e. $(projectDockerDir)
+      tags: |
+        $(tag) # pipeline variable
+        latest
+      arguments: >
+        --secret id=ado_token,env=SYSTEM_ACCESSTOKEN # How the System Access Token is parsed into the Dockerfile for the build.
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken) # CICD Variable
+      DOCKER_BUILDKIT: ${{ parameters.dockerBuildKit }} # Parse as env for docker build. Define version for consistency.
+      DOCKER_API_VERSION: ${{ parameters.dockerAPIVersion }} # Parse as env for docker build. Define version for consistency.
+    displayName: 'ACR - CONTAINER - BUILD'
+    condition: and(succeeded(), eq(variables['allGood'], 'true'))
+
+
+
+  - task: Docker@2
+    inputs:
+      command: push
+      containerRegistry: '<dockerRegistryServiceConnectionId>'
+      repository: '<name-acr-repo>'
+      tags: |
+        $(tag) # pipeline variable
+        latest
+    displayName: 'ACR - CONTAINER - PUSH'
+    condition: and(succeeded(), eq(variables['allGood'], 'true'))
+
+
+    # Include the project git repo.
+  - checkout: 'self'
+    fetchDepth: 0 # Fetch full history of git repo.
+    persistCredentials: true # Ensure pipeline build environment has credentials for git operations.
+
+
+    # Include a library git repo.
+  - checkout: '<name-repo-library>'
+    path: 's/<name-repo-library>'
+    fetchDepth: 0 # Fetch full history of git repo.
+    persistCredentials: true # Ensure pipeline build environment has credentials for git operations.
+
+
+    # Setup git credentials for pipeline. It's a user too!
+  - script: |
+    
+      # Pipeline needs git credentials.
+      git config user.name "<user-name-pipeline>"
+      git config user.email "<company-email-safe-to-ref-for-pipeline>"
+    
+    workdingDirectory: '<workding-dir>'
+    displayName: 'CONFIGURE - GIT FOR PIPELINE'
+    condition: succeeded()
+
+
+  - task: PublishCodeCoverageResult@2 # The Azure DevOps way to generate the code coverage results at the end of the pipeline.
+    inputs:
+      codeCoverageTool: 'Cobertura' # The standard.
+      summaryFileLolcation: '<dir-artefacts>'
+    displayName: 'PIPELINE - PUBLISH CODE COVERAGE RESULTS'
+    condition: succeeded()
+
+
+  - task: PublishTestResults@2 # Publish results at end of pipeline via parsing Junit results format.
+    inputs:
+      mergeTestResults: true # Capture multiple JUnit test files. One for each module.
+      testResultsFormat: 'JUnit'
+      searchFolder: '<dir-artefacts>'
+    displayName: 'PUBLISH TEST RESULTS'
+    condition: succeeded()
 
 
