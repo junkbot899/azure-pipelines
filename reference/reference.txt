@@ -1,0 +1,19 @@
+AZURE PIPELINES CI/CD
+
+---
+- Rainer Stropek - demos and content: 
+  - https://www.youtube.com/watch?v=50fCOM4JfbA
+  - https://github.com/rstropek/gophers-azure-pipelines
+- Reference:
+  - https://digatus.com/en/part-2-advanced-ci-cd-with-azure-devops/
+  - https://www.youtube.com/watch?v=A_N5oHwwmTQ&list=PLl4APkPHzsUXseJO1a03CtfRDzr2hivbD
+  - https://learn.microsoft.com/en-us/azure/devops/pipelines/?view=azure-devops
+  - https://andypowell00.github.io/posts/Unit-Tests-Azure-Pipeline/
+- Convert Go code coverage report / test output to Azure Pipeline compliant files.
+  - Need JUnit, Cobertura and Go CCR -> JSON.
+    - https://github.com/axw/gocov/tags
+    - https://github.com/jstemmer/go-junit-report/tags
+    - https://github.com/AlekSi/gocov-xml/tags
+
+---
+
